@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Intelligent PDF Analyzer</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {}
+      }
+    }
+  </script>
+</head>
+<body class="bg-gray-100 min-h-screen p-4">
+  <div id="app" class="flex flex-col items-center w-full max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-6">
+    <!-- Language Selector -->
+    <div class="w-full flex justify-between items-center mb-4">
+      <div class="flex space-x-2" id="language-selector">
+        <button 
+          id="btn-arabic" 
+          class="px-3 py-1 rounded bg-blue-500 text-white"
+          onclick="setLanguage('arabic')"
+        >
+          العربية
+        </button>
+        <button 
+          id="btn-english" 
+          class="px-3 py-1 rounded bg-gray-200"
+          onclick="setLanguage('english')"
+        >
+          English
+        </button>
+      </div>
+    </div>
+    
+    <!-- Header -->
+    <h1 id="page-title" class="text-3xl font-bold text-center mb-6">
+      محلل PDF ذكي
+    </h1>
+    <p id="page-subtitle" class="text-center text-gray-600 mb-6">
+      قم برفع ملف PDF وسيقوم الذكاء الاصطناعي بتحليل محتواه وتقديم شرح مفصل
+    </p>
+    
+    <!-- Analysis Depth Selector -->
+    <div class="w-full flex space-x-4 mb-6" id="depth-container">
+      <div class="flex-1 p-4 bg-blue-50 rounded-lg border border-blue-100">
+        <h3 id="depth-title" class="font-medium text-blue-800 mb-2">
+          عمق التحليل
+        </h3>
+        <div class="flex gap-2">
+          <button
+            id="btn-standard"
+            onclick="setAnalysisDepth('standard')"
+            class="flex-1 py-2 px-3 rounded text-sm bg-blue-500 text-white"
+          >
+            قياسي
+          </button>
+          <button
+            id="btn-deep"
+            onclick="setAnalysisDepth('deep')"
+            class="flex-1 py-2 px-3 rounded text-sm bg-white border border-gray-300"
+          >
+            عميق
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- File Upload Area -->
+    <div class="w-full p-6 border-2 border-dashed border-gray-300 rounded-lg mb-6 text-center">
+      <div id="file-selection-empty" class="flex flex-col items-center">
+        <p id="drag-text" class="mb-4">
+          اسحب ملف PDF هنا أو اضغط لاختيار ملف
+        </p>
+        <label class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors cursor-pointer">
+          <span id="select-file-text">اختيار ملف PDF</span>
+          <input 
+            type="file" 
+            accept=".pdf" 
+            id="file-input"
+            class="hidden" 
+          />
+        </label>
+      </div>
+      
+      <div id="file-selection-filled" class="flex flex-col items-center hidden">
+        <p class="mb-2 text-lg">
+          <span id="selected-file-prefix">الملف المختار:</span> <span id="selected-filename"></span>
+        </p>
+        <button 
+          id="btn-remove-file"
+          class="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
+        >
+          حذف الملف
+        </button>
+      </div>
+    </div>
+    
+    <!-- Error Message -->
+    <p id="error-message" class="text-red-500 mb-4 hidden"></p>
+    
+    <!-- Analyze Button -->
+    <button 
+      id="btn-analyze"
+      class="px-6 py-3 text-lg rounded-md text-white mb-6 w-full sm:w-64 bg-gray-400 cursor-not-allowed"
+      disabled
+    >
+      تحليل المستند باستخدام الذكاء الاصطناعي
+    </button>
+    
+    <!-- Loading Indicator -->
+    <div id="loading-indicator" class="flex flex-col justify-center items-center mb-6 hidden">
+      <div class="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+      <p id="analyzing-text" class="text-lg">
+        جاري تحليل المستند باستخدام الذكاء الاصطناعي...
+      </p>
+      <p id="analyzing-subtitle" class="text-sm text-gray-600 mt-2">
+        قد تستغرق العملية بضع دقائق حسب حجم وتعقيد المستند
+      </p>
+      <p id="analyzing-deep-notice" class="text-sm text-blue-600 mt-2 hidden">
+        تم اختيار التحليل العميق، قد يستغرق ذلك وقتًا إضافيًا
+      </p>
+    </div>
+    
+    <!-- Results Section -->
+    <div id="results-container" class="w-full mb-6 bg-white rounded-lg shadow-md overflow-hidden hidden">
+      <!-- Results Header -->
+      <div class="bg-blue-50 p-4 border-b">
+        <h2 class="text-xl font-bold">
+          <span id="analysis-prefix">تحليل:</span> <span id="result-filename"></span>
+        </h2>
+        <p class="text-sm text-gray-600">
+          <span id="pages-prefix">عدد الصفحات:</span> <span id="result-pagecount"></span>
+        </p>
+        <span id="deep-analysis-badge" class="inline-block mt-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded hidden">
+          تحليل عميق
+        </span>
+      </div>
+      
+      <!-- Results Tabs -->
+      <div class="flex border-b border-gray-200 bg-gray-50 overflow-x-auto" id="results-tabs">
+        <button
+          id="tab-summary"
+          class="py-2 px-4 font-medium whitespace-nowrap text-blue-600 border-b-2 border-blue-600 bg-white"
+          data-tab="summary"
+        >
+          الملخص
+        </button>
+        <button
+          id="tab-keyPoints"
+          class="py-2 px-4 font-medium whitespace-nowrap text-gray-600"
+          data-tab="keyPoints"
+        >
+          النقاط الرئيسية
+        </button>
+        <button
+          id="tab-detailed"
+          class="py-2 px-4 font-medium whitespace-nowrap text-gray-600"
+          data-tab="detailed"
+        >
+          شرح مفصل
+        </button>
+        <button
+          id="tab-equations"
+          class="py-2 px-4 font-medium whitespace-nowrap text-gray-600 hidden"
+          data-tab="equations"
+        >
+          المعادلات
+        </button>
+        <button
+          id="tab-problems"
+          class="py-2 px-4 font-medium whitespace-nowrap text-gray-600"
+          data-tab="problems"
+        >
+          المسائل المحلولة
+        </button>
+      </div>
+      
+      <!-- Results Content -->
+      <div class="p-6">
+        <!-- Summary Tab -->
+        <div id="tab-content-summary" class="tab-content">
+          <h3 class="text-lg font-bold mb-3" id="summary-title">
+            ملخص المستند:
+          </h3>
+          <p class="p-4 bg-gray-50 rounded-lg border border-gray-200" id="summary-content"></p>
+        </div>
+        
+        <!-- Key Points Tab -->
+        <div id="tab-content-keyPoints" class="tab-content hidden">
+          <h3 class="text-lg font-bold mb-3" id="keypoints-title">
+            النقاط الرئيسية:
+          </h3>
+          <div class="space-y-4" id="keypoints-container">
+            <!-- Key points will be inserted here by JavaScript -->
+          </div>
+        </div>
+        
+        <!-- Detailed Explanation Tab -->
+        <div id="tab-content-detailed" class="tab-content hidden">
+          <h3 class="text-lg font-bold mb-3" id="detailed-title">
+            شرح مفصل:
+          </h3>
+          <div class="space-y-4" id="detailed-container">
+            <!-- Detailed explanations will be inserted here by JavaScript -->
+          </div>
+        </div>
+        
+        <!-- Equations Tab -->
+        <div id="tab-content-equations" class="tab-content hidden">
+          <h3 class="text-lg font-bold mb-3" id="equations-title">
+            المعادلات:
+          </h3>
+          <div class="space-y-4" id="equations-container">
+            <!-- Equations will be inserted here by JavaScript -->
+          </div>
+        </div>
+        
+        <!-- Problems Tab -->
+        <div id="tab-content-problems" class="tab-content hidden">
+          <h3 class="text-lg font-bold mb-3" id="problems-title">
+            المسائل المحلولة:
+          </h3>
+          <div class="space-y-4" id="problems-container">
+            <!-- Problems will be inserted here by JavaScript -->
+          </div>
+        </div>
+        
+        <!-- Footer Note -->
+        <div class="mt-6 border-t border-gray-200 pt-4 text-sm text-gray-600">
+          <p id="footer-note">
+            ملاحظة: في التطبيق الحقيقي، سيتم استخدام نماذج الذكاء الاصطناعي المتقدمة مثل GPT-4 أو Claude لتحليل محتوى ملفات PDF واستخراج المعلومات المهمة.
+          </p>
+        </div>
+      </div>
+    </div>
+    
+    <!-- API Integration Section -->
+    <div id="api-note" class="w-full p-4 bg-gray-50 rounded-lg border border-gray-200 mt-8">
+      <h3 class="text-lg font-bold mb-2" id="api-note-title">
+        ملاحظة حول التكامل مع API
+      </h3>
+      <p class="text-gray-700" id="api-note-content">
+        يمكن تكامل هذا التطبيق مع أي واجهة برمجة تطبيقات (API) للذكاء الاصطناعي مثل OpenAI أو Claude أو غيرها للحصول على تحليل حقيقي لملفات PDF.
+      </p>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
